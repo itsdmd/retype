@@ -4,8 +4,18 @@ const isAllowedKeyCode = (code) => {
   return (
     code.startsWith("Key") ||
     code.startsWith("Digit") ||
+    code.startsWith("Numpad") ||
+    code.startsWith("Bracket") ||
+    code.endsWith("colon") ||
+    code.toLowerCase().endsWith("slash") ||
+    code.toLowerCase().endsWith("quote") ||
     code === "Space" ||
-    code === "Backspace"
+    code === "Backspace" ||
+    code === "Period" ||
+    code === "Comma" ||
+    code === "Add" ||
+    code === "Minus" ||
+    code === "Equal"
   );
 };
 

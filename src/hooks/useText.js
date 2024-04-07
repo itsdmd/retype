@@ -1,28 +1,35 @@
 import { useState, useCallback } from "react";
 
-const retrieveText = (numOfWords, page) => {
-  const text = [
-    "hello",
-    " ",
-    "world",
-    " ",
-    "this",
-    " ",
-    "is",
-    " ",
-    "a",
-    " ",
-    "test",
-  ];
-  return text;
+const retrieveText = (wordsPerPage, pageNumber) => {
+  if (pageNumber < 1) {
+    console.error("page must be greater than 0");
+    return;
+  }
+
+  const plainText =
+    "hello world, this is a test string that was hard coded !@#$%^&*()_+{}|:\"<>?~`-=[]\\;',./";
+  const textArray = plainText.split(" ");
+
+  const result = [];
+  for (
+    let i = wordsPerPage * (pageNumber - 1);
+    i < wordsPerPage * (pageNumber - 1) + wordsPerPage;
+    i++
+  ) {
+    result.push(textArray[i]);
+    if (i < textArray.length - 1) {
+      result.push(" ");
+    }
+  }
+  return result;
 };
 
-const useText = (count, page) => {
-  const [text, setText] = useState(retrieveText(count, page));
+const useText = (numOfWords, page) => {
+  const [text, setText] = useState(retrieveText(numOfWords, page));
 
   const updateText = useCallback(() => {
-    setText(retrieveText(count, page));
-  }, [count, page]);
+    setText(retrieveText(numOfWords, page));
+  }, [numOfWords, page]);
 
   return { text, updateText };
 };

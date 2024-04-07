@@ -23,12 +23,12 @@ function App() {
         <UserInput className="absolute inset-0" userInput={typed} text={text} />
       </TextContainer>
 
-      <Results
-        accuracy={accuracy}
-        errors={errors}
-        total={text.length}
-        className="mt-10"
-      />
+      {/* <Results */}
+      {/*   accuracy={accuracy} */}
+      {/*   errors={errors} */}
+      {/*   total={text.length} */}
+      {/*   className="mt-10" */}
+      {/* /> */}
     </>
   );
 }
