@@ -20,7 +20,7 @@ function App() {
     <>
       <TextContainer>
         <OriginalText text={text} />
-        <UserInput className="absolute inset-0" userInput={typed} />
+        <UserInput className="absolute inset-0" userInput={typed} text={text} />
       </TextContainer>
 
       <Results

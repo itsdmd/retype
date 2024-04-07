@@ -1,17 +1,38 @@
+import classNames from "classnames";
+
 import Caret from "./Caret";
 
-const Character = ({ char }) => {
-  return <span className="text-primary-500">{char}</span>;
+const Character = ({ typed, expected }) => {
+  const isCorrect = typed === expected;
+  const isSpace = expected === " ";
+
+  return (
+    <span
+      className={classNames({
+        "text-primary-400": isCorrect && !isSpace,
+        "text-error-500": !isCorrect && !isSpace,
+        "bg-red-500/50": !isCorrect && isSpace,
+      })}
+    >
+      {expected}
+    </span>
+  );
 };
 
-const UserInput = ({ userInput, className }) => {
-  const characters = userInput.split("");
+const UserInput = ({ userInput, text, className }) => {
+  const typedChars = userInput.split("");
+  const splittedText = text.join("").split("");
 
   return (
     <div className={className}>
-      {characters.map((char, index) => {
+      {typedChars.map((char, index) => {
         return (
-          <Character key={`${char}_${index}`} char={char} status={"primary"}>
+          <Character
+            key={`${char}_${index}`}
+            typed={char}
+            expected={splittedText[index]}
+            status={"primary"}
+          >
             {char}
           </Character>
         );
