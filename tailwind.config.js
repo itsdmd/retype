@@ -7,7 +7,7 @@ export default {
     extend: {
       colors: {
         primary: colors.yellow,
-        inactive: colors.slate,
+        secondary: colors.slate,
         error: colors.red,
       },
     },

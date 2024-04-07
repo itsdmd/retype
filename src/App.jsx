@@ -1,4 +1,6 @@
 import Results from "./components/Results.jsx";
+import UserInput from "./components/UserInput.jsx";
+import TextContainer from "./components/TextContainer.jsx";
 
 const words = [
   "hello",
@@ -13,22 +15,27 @@ const words = [
   " ",
   "test",
 ];
+const str = "test test test test test test";
 const accuracy = 0.982;
 const errors = 2;
 
-const GeneratedText = ({ text }) => {
-  return <div className="text-4xl text-center text-inactive-500">{words}</div>;
+const OriginalText = ({ text }) => {
+  return <div className="text-secondary-500">{words}</div>;
 };
 
 function App() {
   return (
     <>
-      <GeneratedText text={words} />
+      <TextContainer>
+        <OriginalText text={words} />
+        <UserInput className="absolute inset-0" userInput={str} />
+      </TextContainer>
+
       <Results
         accuracy={accuracy}
         errors={errors}
         total={words.length}
-        className="mt-5"
+        className="mt-10"
       />
     </>
   );
