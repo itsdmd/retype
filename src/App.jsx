@@ -1,40 +1,32 @@
+import React, { useState } from "react";
+
+import useEngine from "./hooks/useEngine.js";
+
 import Results from "./components/Results.jsx";
 import UserInput from "./components/UserInput.jsx";
 import TextContainer from "./components/TextContainer.jsx";
 
-const words = [
-  "hello",
-  " ",
-  "world",
-  " ",
-  "this",
-  " ",
-  "is",
-  " ",
-  "a",
-  " ",
-  "test",
-];
 const str = "test test test test test test";
 const accuracy = 0.982;
 const errors = 2;
 
 const OriginalText = ({ text }) => {
-  return <div className="text-secondary-500">{words}</div>;
+  return <div className="text-secondary-500">{text}</div>;
 };
 
 function App() {
+  const { state, text, typed } = useEngine();
   return (
     <>
       <TextContainer>
-        <OriginalText text={words} />
-        <UserInput className="absolute inset-0" userInput={str} />
+        <OriginalText text={text} />
+        <UserInput className="absolute inset-0" userInput={typed} />
       </TextContainer>
 
       <Results
         accuracy={accuracy}
         errors={errors}
-        total={words.length}
+        total={text.length}
         className="mt-10"
       />
     </>
