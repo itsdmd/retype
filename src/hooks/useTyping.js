@@ -25,24 +25,25 @@ const useTyping = (enabled = true) => {
   const totalTyped = useRef(0);
 
   const keydownHandler = useCallback(
-    ({ key, code }) => {
+    (event) => {
+      event.preventDefault();
       if (!enabled) {
         console.log("not enabled");
         return;
       }
-      if (!isAllowedKeyCode(code)) {
-        console.log("invalid code", code);
+      if (!isAllowedKeyCode(event.code)) {
+        console.log("invalid code", event.code);
         return;
       }
 
-      switch (key) {
+      switch (event.key) {
         case "Backspace":
           setTyped((prev) => prev.slice(0, -1));
           setCursor(cursor - 1);
           totalTyped.current -= 1;
           break;
         default:
-          setTyped((prev) => prev.concat(key));
+          setTyped((prev) => prev.concat(event.key));
           setCursor(cursor + 1);
           totalTyped.current += 1;
           break;
