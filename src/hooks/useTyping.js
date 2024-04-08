@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 
-const isAllowedKeyCode = (code) => {
+function isAllowedKeyCode(code) {
   return (
     code.startsWith("Key") ||
     code.startsWith("Digit") ||
@@ -17,9 +17,9 @@ const isAllowedKeyCode = (code) => {
     code === "Minus" ||
     code === "Equal"
   );
-};
+}
 
-const useTyping = (enabled = true) => {
+function useTyping(enabled = true) {
   const [cursor, setCursor] = useState(0);
   const [typed, setTyped] = useState("");
   const totalTyped = useRef(0);
@@ -52,11 +52,11 @@ const useTyping = (enabled = true) => {
     [cursor, enabled],
   );
 
-  const reset = () => {
+  function reset() {
     setTyped("");
     setCursor(0);
     totalTyped.current = 0;
-  };
+  }
 
   useEffect(() => {
     window.addEventListener("keydown", keydownHandler);
@@ -66,6 +66,6 @@ const useTyping = (enabled = true) => {
   }, [keydownHandler]);
 
   return { cursor, typed, totalTyped: totalTyped.current, reset };
-};
+}
 
 export default useTyping;

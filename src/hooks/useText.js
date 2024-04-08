@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 
-const retrieveText = (wordsPerPage, pageNumber) => {
+function retrieveText(wordsPerPage, pageNumber) {
   if (pageNumber < 1) {
     console.error("page must be greater than 0");
     return;
@@ -22,9 +22,9 @@ const retrieveText = (wordsPerPage, pageNumber) => {
     }
   }
   return result;
-};
+}
 
-const useText = (numOfWords, page) => {
+function useText(numOfWords, page) {
   const [text, setText] = useState(retrieveText(numOfWords, page));
 
   const updateText = useCallback(() => {
@@ -32,6 +32,6 @@ const useText = (numOfWords, page) => {
   }, [numOfWords, page]);
 
   return { text, updateText };
-};
+}
 
 export default useText;
