@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { useGoogleLogin, hasGrantedAllScopesGoogle } from "@react-oauth/google";
-import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
+import { useState, useEffect } from "react";
+import { useGoogleLogin } from "@react-oauth/google";
+import * as cookie from "../utils/cookie";
 
 import { FaGoogle } from "react-icons/fa";
 import { FaCloudArrowUp } from "react-icons/fa6";
 
-import * as cookie from "../utils/cookie";
+const API_KEY = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
 
 function TopBar() {
   const [response, setResponse] = useState(null);
   const [user, setUser] = useState(null);
+  const [data, setData] = useState({ test: "test" });
 
   const login = useGoogleLogin({
     onSuccess: (response) => {
@@ -32,7 +32,10 @@ function TopBar() {
   useEffect(() => {
     if (cookie.getCookie("userAuth")) {
       setResponse(cookie.getCookie("userAuth"));
+      console.log("User Auth Cookie: ", cookie.getCookie("userAuth"));
       setUser(cookie.getCookie("userInfo"));
+      console.log("User Info Cookie: ", cookie.getCookie("userInfo"));
+      retrieveAppData();
     }
   }, []);
 
@@ -51,7 +54,6 @@ function TopBar() {
     async function fetchUser() {
       if (response) {
         if (hasAllRequiredScopes(response.scope)) {
-          // console.log(response);
           const expiryDate = new Date();
           expiryDate.setDate(expiryDate.getDate() + 7);
           cookie.setCookie("userAuth", response, { expires: expiryDate });
@@ -71,7 +73,6 @@ function TopBar() {
         }
       }
     }
-
     fetchUser();
   }, [response]);
 
@@ -84,6 +85,61 @@ function TopBar() {
     console.log("Logged out");
   };
 
+  async function uploadAppData(data) {
+    const url =
+      "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id&supportsAllDrives=true&key=" +
+      API_KEY;
+
+    data.name = "retype_app_data.json";
+    data.parents = ["appDataFolder"];
+    console.log(data);
+
+    const metadata = {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cookie.getCookie("userAuth").access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      media: {
+        mimeType: "application/json",
+      },
+    };
+
+    const response = await fetch(url, metadata);
+    const json = await response.json();
+    console.log(json);
+
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 7);
+    cookie.setCookie("appDataId", json.id, { expires: expiryDate });
+
+    return json;
+  }
+
+  async function retrieveAppData() {
+    if (cookie.getCookie("userAuth")) {
+      const url =
+        "https://www.googleapis.com/drive/v3/files/" +
+        cookie.getCookie("appDataId") +
+        "?" +
+        "alt=media&key=" +
+        API_KEY;
+      const metadata = {
+        headers: {
+          Authorization: `Bearer ${cookie.getCookie("userAuth").access_token}`,
+          "Content-Type": "application/json",
+        },
+      };
+      const response = await fetch(url, metadata);
+      // const json = await response.json();
+      console.log(response);
+      const data = await response.text();
+      const json = JSON.parse(data);
+      console.log(json);
+    }
+  }
+
   return (
     <div className="bg-secondary-800 flex place-content-center py-4">
       <div className="flex justify-between items-center w-11/12">
@@ -91,7 +147,10 @@ function TopBar() {
 
         {user !== null ? (
           <div className="flex justify-between items-center w-1/2">
-            <button className="flex gap-2 items-center bg-transparent hover:bg-primary-500 border border-secondary-500 hover:border-transparent text-secondary-500 hover:text-secondary-800 font-bold py-2 px-4 rounded-full">
+            <button
+              onClick={() => uploadAppData(data)}
+              className="flex gap-2 items-center bg-transparent hover:bg-primary-500 border border-secondary-500 hover:border-transparent text-secondary-500 hover:text-secondary-800 font-bold py-2 px-4 rounded-full"
+            >
               <FaCloudArrowUp />
               Upload
             </button>
