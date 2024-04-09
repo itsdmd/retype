@@ -1,12 +1,8 @@
 import React, { useState } from "react";
 
-// import fs from "fs";
-// import path from "path";
-// import { authenticate } from "@google-cloud/local-auth";
-// import { google } from "googleapis";
-
 import useEngine from "./hooks/useEngine.js";
 
+import TopBar from "./components/TopBar.jsx";
 import Results from "./components/Results.jsx";
 import UserInput from "./components/UserInput.jsx";
 import TextContainer from "./components/TextContainer.jsx";
@@ -23,17 +19,23 @@ function App() {
   const { state, text, typed } = useEngine();
   return (
     <>
-      <TextContainer>
-        <OriginalText text={text} />
-        <UserInput className="absolute inset-0" userInput={typed} text={text} />
-      </TextContainer>
-
-      {/* <Results */}
-      {/*   accuracy={accuracy} */}
-      {/*   errors={errors} */}
-      {/*   total={text.length} */}
-      {/*   className="mt-10" */}
-      {/* /> */}
+      <TopBar />
+      <div className="min-h-screen bg-secondary-800 grid place-items-center font-mono tracking-wider px-4">
+        <TextContainer>
+          <OriginalText text={text} />
+          <UserInput
+            className="absolute inset-0"
+            userInput={typed}
+            text={text}
+          />
+        </TextContainer>
+        {/* <Results */}
+        {/*   accuracy={accuracy} */}
+        {/*   errors={errors} */}
+        {/*   total={text.length} */}
+        {/*   className="mt-10" */}
+        {/* /> */}
+      </div>
     </>
   );
 }
