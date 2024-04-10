@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import * as cookie from "../utils/cookie";
+import { useCookies } from "react-cookie";
 
 import { FaGoogle } from "react-icons/fa";
 import { FaCloudArrowUp } from "react-icons/fa6";
@@ -8,37 +9,19 @@ import { FaCloudArrowUp } from "react-icons/fa6";
 const API_KEY = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
 
 function TopBar() {
-  const [response, setResponse] = useState(null);
-  const [user, setUser] = useState(null);
+  // const [response, setResponse] = useState(null);
+  // const [user, setUser] = useState(null);
   const [data, setData] = useState({ test: "test" });
 
-  const login = useGoogleLogin({
-    onSuccess: (response) => {
-      console.log(response);
-      setResponse(response);
-    },
-    onError: () => {
-      console.log("Login Failed");
-      setResponse(null);
-    },
-    onNonOAuthError: (error) => {
-      console.error("Non-OAuth error", error);
-      setResponse(null);
-    },
-    scope:
-      "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file",
-  });
+  const expiryDate = new Date();
+  expiryDate.setDate(expiryDate.getDate() + 7);
+  const cookieNames = ["userInfo", "userAuth", "appDataId", "appData"];
+  const [cookies, setCookie, removeCookie] = useCookies(cookieNames);
 
-  useEffect(() => {
-    if (cookie.getCookie("userAuth")) {
-      setResponse(cookie.getCookie("userAuth"));
-      console.log("User Auth Cookie: ", cookie.getCookie("userAuth"));
-      setUser(cookie.getCookie("userInfo"));
-      console.log("User Info Cookie: ", cookie.getCookie("userInfo"));
-      retrieveAppData();
-    }
-  }, []);
-
+  const scopeUrls = [
+    "https://www.googleapis.com/auth/drive.appdata",
+    "https://www.googleapis.com/auth/drive.file",
+  ];
   const requiredScopes = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.profile",
@@ -50,38 +33,56 @@ function TopBar() {
     return requiredScopes.every((scope) => scopes.includes(scope));
   };
 
-  useEffect(() => {
-    async function fetchUser() {
-      if (response) {
-        if (hasAllRequiredScopes(response.scope)) {
-          const expiryDate = new Date();
-          expiryDate.setDate(expiryDate.getDate() + 7);
-          cookie.setCookie("userAuth", response, { expires: expiryDate });
+  const login = useGoogleLogin({
+    onSuccess: (response) => {
+      console.log(response);
+      setCookie("userAuth", response, {
+        expires: expiryDate,
+      });
+      window.location.reload();
+    },
+    onError: () => {
+      console.log("Login Failed");
+      logout();
+    },
+    onNonOAuthError: (error) => {
+      console.error("Non-OAuth error", error);
+      logout();
+    },
+    scope: scopeUrls.join(" "),
+  });
 
-          await fetch(
-            "https://www.googleapis.com/oauth2/v3/userinfo?alt=json&access_token=" +
-              response.access_token
-          ).then(async (res) => {
-            const json = await res.json();
-            setUser(json);
-            cookie.setCookie("userInfo", user, { expires: expiryDate });
-          });
-        } else {
-          console.error("User has not granted all scopes");
-          console.log(response);
-          logout();
-        }
+  async function fetchUser() {
+    if (cookies.userAuth) {
+      if (hasAllRequiredScopes(cookies.userAuth.scope)) {
+        await fetch(
+          "https://www.googleapis.com/oauth2/v3/userinfo?alt=json&access_token=" +
+            cookies.userAuth.access_token
+        ).then(async (res) => {
+          const json = await res.json();
+          setCookie("userInfo", json, { expires: expiryDate });
+        });
+      } else {
+        console.error("User has not granted all scopes");
+        console.log(cookies.userAuth.scope);
+        logout();
       }
     }
-    fetchUser();
-  }, [response]);
+  }
+
+  useEffect(() => {
+    console.log("useEffect");
+    if (cookies.userAuth && cookies.userAuth !== null) {
+      fetchUser();
+      retrieveAppData();
+    }
+  }, []);
 
   const logout = () => {
     console.log("Logging out");
-    setResponse(null);
-    setUser(null);
-    cookie.removeCookie("userInfo");
-    cookie.removeCookie("userAuth");
+    for (const name of cookieNames) {
+      removeCookie(name);
+    }
     console.log("Logged out");
   };
 
@@ -97,7 +98,7 @@ function TopBar() {
     const metadata = {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${cookie.getCookie("userAuth").access_token}`,
+        Authorization: `Bearer ${cookies.userAuth.access_token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
@@ -110,30 +111,29 @@ function TopBar() {
     const json = await response.json();
     console.log(json);
 
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 7);
-    cookie.setCookie("appDataId", json.id, { expires: expiryDate });
+    setCookie("appDataId", json.id, { expires: expiryDate });
 
     return json;
   }
 
   async function retrieveAppData() {
-    if (cookie.getCookie("userAuth")) {
+    if (cookies.userAuth && cookies.appDataId) {
       const url =
         "https://www.googleapis.com/drive/v3/files/" +
-        cookie.getCookie("appDataId") +
+        cookies.appDataId +
         "?" +
         "alt=media&key=" +
         API_KEY;
       const metadata = {
         headers: {
-          Authorization: `Bearer ${cookie.getCookie("userAuth").access_token}`,
+          Authorization: `Bearer ${cookies.userAuth.access_token}`,
           "Content-Type": "application/json",
         },
       };
       const response = await fetch(url, metadata);
       // const json = await response.json();
       console.log(response);
+
       const data = await response.text();
       const json = JSON.parse(data);
       console.log(json);
@@ -145,7 +145,7 @@ function TopBar() {
       <div className="flex justify-between items-center w-11/12">
         <img src="/retype_logo_transparent.png" alt="logo" className="h-20" />
 
-        {user !== null ? (
+        {cookies.userInfo && cookies.userInfo !== null ? (
           <div className="flex justify-between items-center w-1/2">
             <button
               onClick={() => uploadAppData(data)}
@@ -162,7 +162,7 @@ function TopBar() {
                 Logout
               </div>
               <img
-                src={user.picture}
+                src={cookies.userInfo.picture}
                 alt="profile"
                 className="h-10 w-10 rounded-full"
               />
