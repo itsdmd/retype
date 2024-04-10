@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
-import * as cookie from "../utils/cookie";
 import { useCookies } from "react-cookie";
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore/lite";
 
 import { FaGoogle } from "react-icons/fa";
 import { FaCloudArrowUp } from "react-icons/fa6";
@@ -9,9 +10,16 @@ import { FaCloudArrowUp } from "react-icons/fa6";
 const API_KEY = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
 
 function TopBar() {
-  // const [response, setResponse] = useState(null);
-  // const [user, setUser] = useState(null);
   const [data, setData] = useState({ test: "test" });
+  const firebaseApp = initializeApp({
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  });
+  const db = getFirestore(firebaseApp);
 
   const expiryDate = new Date();
   expiryDate.setDate(expiryDate.getDate() + 7);
@@ -33,6 +41,29 @@ function TopBar() {
     return requiredScopes.every((scope) => scopes.includes(scope));
   };
 
+  async function getUserData(id) {
+    if (id === undefined || id === null) {
+      id = cookies.userInfo.sub;
+    }
+    const ref = doc(db, "users", id);
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      console.log("User data:", snap.data());
+      return snap.data();
+    } else {
+      console.log("User not found!");
+    }
+  }
+
+  async function setUserData(data) {
+    if (cookies.userInfo.sub && cookies.userInfo.sub !== null) {
+      const res = await setDoc(doc(db, "users", cookies.userInfo.sub), data);
+      console.log("Set user in database", res);
+      return res;
+    }
+  }
+
   const login = useGoogleLogin({
     onSuccess: (response) => {
       console.log(response);
@@ -52,16 +83,29 @@ function TopBar() {
     scope: scopeUrls.join(" "),
   });
 
-  async function fetchUser() {
+  async function fetchUserInfo() {
     if (cookies.userAuth) {
       if (hasAllRequiredScopes(cookies.userAuth.scope)) {
         await fetch(
           "https://www.googleapis.com/oauth2/v3/userinfo?alt=json&access_token=" +
             cookies.userAuth.access_token
-        ).then(async (res) => {
-          const json = await res.json();
-          setCookie("userInfo", json, { expires: expiryDate });
-        });
+        )
+          .then(async (res) => {
+            const json = await res.json();
+            setCookie("userInfo", json, { expires: expiryDate });
+            return json;
+          })
+          .then(async (json) => {
+            console.log("User info:", json);
+            const userDoc = await getUserData(json.sub);
+            if (userDoc) {
+              console.log("User found in database");
+              cookies.appDataId = userDoc.appDataId;
+            } else {
+              console.log("User not found in database");
+              removeCookie("appDataId");
+            }
+          });
       } else {
         console.error("User has not granted all scopes");
         console.log(cookies.userAuth.scope);
@@ -73,7 +117,7 @@ function TopBar() {
   useEffect(() => {
     console.log("useEffect");
     if (cookies.userAuth && cookies.userAuth !== null) {
-      fetchUser();
+      fetchUserInfo();
       retrieveAppData();
     }
   }, []);
@@ -87,37 +131,48 @@ function TopBar() {
   };
 
   async function uploadAppData(data) {
-    const url =
-      "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id&supportsAllDrives=true&key=" +
-      API_KEY;
+    const doc = await getUserData();
+    if (doc.appDataId && doc.appDataId !== "") {
+      console.log("User data:", doc);
+      setCookie("appDataId", doc.appDataId, { expires: expiryDate });
+    } else if (cookies.userAuth.access_token) {
+      const url =
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id&supportsAllDrives=true&key=" +
+        API_KEY;
 
-    data.name = "retype_app_data.json";
-    data.parents = ["appDataFolder"];
-    console.log(data);
+      data.name = "retype_app_data.json";
+      data.parents = ["appDataFolder"];
+      console.log(data);
 
-    const metadata = {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${cookies.userAuth.access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-      media: {
-        mimeType: "application/json",
-      },
-    };
+      const metadata = {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${cookies.userAuth.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        media: {
+          mimeType: "application/json",
+        },
+      };
 
-    const response = await fetch(url, metadata);
-    const json = await response.json();
-    console.log(json);
+      const response = await fetch(url, metadata);
+      const json = await response.json();
+      console.log(json);
 
-    setCookie("appDataId", json.id, { expires: expiryDate });
+      setCookie("appDataId", json.id, { expires: expiryDate });
+      setUserData({ appDataId: json.id });
 
-    return json;
+      return json;
+    }
   }
 
   async function retrieveAppData() {
-    if (cookies.userAuth && cookies.appDataId) {
+    const doc = await getUserData();
+    if (doc.appDataId && doc.appDataId !== "") {
+      console.log("User data:", doc);
+      setCookie("appDataId", doc.appDataId, { expires: expiryDate });
+    } else if (cookies.userAuth && cookies.appDataId) {
       const url =
         "https://www.googleapis.com/drive/v3/files/" +
         cookies.appDataId +
@@ -131,12 +186,10 @@ function TopBar() {
         },
       };
       const response = await fetch(url, metadata);
-      // const json = await response.json();
-      console.log(response);
-
       const data = await response.text();
       const json = JSON.parse(data);
       console.log(json);
+      setUserData(json);
     }
   }
 
